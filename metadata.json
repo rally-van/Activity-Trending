@@ -1,0 +1,5 @@
+{
+  "name": "ActivityTrend",
+  "description": "A comprehensive Strava activity visualizer and AI coach. Syncs your Strava history to a local database, visualizes trends using Recharts, and uses Google Gemini to provide personalized fitness insights and coaching based on your actual performance data.",
+  "requestFramePermissions": []
+}
