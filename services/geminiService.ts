@@ -1,8 +1,6 @@
-import { GoogleGenAI } from "@google/genai";
 import { StravaActivity } from '../types';
 
-// Initialize directly with process.env.API_KEY as per guidelines
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// We no longer import GoogleGenAI directly here to avoid bundling the SDK and Key in the client.
 
 export const generateFitnessInsight = async (
   activities: StravaActivity[],
@@ -28,22 +26,36 @@ export const generateFitnessInsight = async (
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `
-        Context Data (Recent 50 Activities): ${JSON.stringify(summary)}
-        
-        User Question: ${userQuery}
-      `,
-      config: {
-        systemInstruction: systemInstruction,
-        thinkingConfig: { thinkingBudget: 0 } // Speed over deep reasoning for dashboard chat
-      }
+    // Call our secure backend proxy instead of Google directly
+    const response = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gemini-3-flash-preview',
+        contents: `
+          Context Data (Recent 50 Activities): ${JSON.stringify(summary)}
+          
+          User Question: ${userQuery}
+        `,
+        config: {
+          systemInstruction: systemInstruction,
+          thinkingConfig: { thinkingBudget: 0 }
+        }
+      })
     });
 
-    return response.text;
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || `Server Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.text;
+
   } catch (error) {
     console.error("Gemini Error:", error);
-    return "I encountered an error analyzing your data. Please check your API key configuration.";
+    return "I encountered an error analyzing your data. Please check your internet connection.";
   }
 };
